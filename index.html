@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>Wedding Command Center</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+:root{
+  --bg:#050307;
+  --bg2:#100817;
+  --ink:#fff9ff;
+  --soft:#eee2ff;
+  --muted:#aa9ab7;
+  --lilac:#c9a7ff;
+  --lilac2:#eadcff;
+  --purple:#7c3aed;
+  --plum:#34134a;
+  --black:#050307;
+  --card:rgba(255,255,255,.08);
+  --card2:rgba(255,255,255,.12);
+  --line:rgba(201,167,255,.27);
+  --good:#44d17c;
+  --warn:#f2bd4b;
+  --bad:#e05273;
+  --blue:#67d4ff;
+  --shadow:0 20px 60px rgba(0,0,0,.42);
+  --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;font-family:Poppins,sans-serif;background:var(--bg);color:var(--ink)}
+body{
+  background:
+    radial-gradient(circle at 10% -5%,rgba(201,167,255,.24),transparent 34%),
+    radial-gradient(circle at 92% 5%,rgba(124,58,237,.20),transparent 30%),
+    radial-gradient(circle at 55% 110%,rgba(201,167,255,.14),transparent 38%),
+    linear-gradient(145deg,#050307,#130a1a 46%,#050307);
+  overflow-x:hidden;
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;z-index:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:42px 42px;
+}
+button,input,select,textarea{font-family:Poppins,sans-serif}
+button{cursor:pointer;border:none}
+.app{position:relative;z-index:1;display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.sidebar{
+  position:sticky;top:0;height:100vh;padding:14px 12px;background:rgba(5,3,8,.78);
+  border-right:1px solid var(--line);backdrop-filter:blur(24px);overflow:auto;
+}
+.brand{
+  padding:14px 12px;border:1px solid var(--line);border-radius:18px;
+  background:linear-gradient(145deg,rgba(201,167,255,.15),rgba(255,255,255,.045));
+  box-shadow:var(--shadow);margin-bottom:10px;
+}
+.brand .mini{font-size:10px;letter-spacing:.23em;text-transform:uppercase;color:var(--lilac);font-weight:900}
+.brand h1{font-family:"Playfair Display",serif;font-size:19px;line-height:.95;margin:6px 0 5px}
+.brand p{font-size:10px;color:var(--muted);line-height:1.35}
+.syncDot{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:999px;background:var(--warn);box-shadow:0 0 18px rgba(242,189,75,.5)}
+.dot.good{background:var(--good);box-shadow:0 0 18px rgba(68,209,124,.5)}
+.dot.bad{background:var(--bad);box-shadow:0 0 18px rgba(224,82,115,.5)}
+.nav{display:grid;gap:6px}
+.nav button{
+  display:flex;justify-content:space-between;align-items:center;gap:6px;width:100%;text-align:left;
+  padding:8px 10px;border-radius:12px;background:transparent;color:var(--ink);
+  border:1px solid transparent;font-size:11px;font-weight:850;
+}
+.nav button span{font-size:10px;color:var(--muted)}
+.nav button.active,.nav button:hover{background:rgba(201,167,255,.13);border-color:var(--line)}
+.sideTools{display:grid;gap:6px;margin-top:10px}
+.tool{
+  padding:12px;border-radius:12px;background:var(--lilac);color:#13071c;font-size:11px;font-weight:850;
+  box-shadow:0 14px 34px rgba(201,167,255,.22);text-align:center;
+}
+.tool.dark{background:rgba(255,255,255,.07);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.main{padding:14px;max-width:1540px;width:100%;margin:0 auto}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:10px}
+.title h2{font-family:"Playfair Display",serif;font-size:31px;line-height:1}
+.title p{font-size:11px;color:var(--muted);margin-top:4px;max-width:880px}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn{
+  padding:8px 10px;border-radius:10px;background:rgba(201,167,255,.13);border:1px solid var(--line);
+  color:var(--ink);font-size:11px;font-weight:850;
+}
+.btn.primary{background:var(--lilac);color:#13071c;border-color:transparent}
+.btn.good{background:rgba(68,209,124,.15);border-color:rgba(68,209,124,.38);color:#d9ffe8}
+.btn.warn{background:rgba(242,189,75,.15);border-color:rgba(242,189,75,.38);color:#ffe8ac}
+.btn.bad{background:rgba(224,82,115,.15);border-color:rgba(224,82,115,.38);color:#ffd8e0}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(110px,1fr));gap:8px;margin-bottom:10px}
+.stat{padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:var(--shadow)}
+.stat b{display:block;font-size:19px;color:var(--lilac);line-height:1}
+.stat small{display:block;margin-top:4px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:900}
+.panel{display:none;animation:rise .18s ease both}
+.panel.active{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:7px}
+.card{
+  background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.045));
+  border:1px solid var(--line);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);min-width:0;
+}
+.card h3{font-family:"Playfair Display",serif;font-size:19px;margin-bottom:8px}
+.card h4{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--lilac);margin:11px 0 7px}
+.card p,.card li{font-size:11px;line-height:1.38;color:var(--soft)}
+.muted{color:var(--muted)!important}
+.col12{grid-column:span 12}.col8{grid-column:span 8}.col7{grid-column:span 7}.col6{grid-column:span 6}.col5{grid-column:span 5}.col4{grid-column:span 4}.col3{grid-column:span 3}
+.inputGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--lilac);font-weight:850;margin-bottom:3px}
+input,select,textarea{
+  width:100%;padding:8px 9px;border-radius:10px;border:1px solid var(--line);
+  background:rgba(0,0,0,.25);color:var(--ink);outline:none;font-size:11px;
+}
+textarea{min-height:58px;resize:vertical}
+select option{background:#160d20;color:white}
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:12px;margin-top:7px}
+table{width:100%;border-collapse:collapse;min-width:680px}
+th,td{padding:7px 8px;border-bottom:1px solid rgba(201,167,255,.13);font-size:10.5px;text-align:left;vertical-align:top}
+th{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--lilac);background:rgba(0,0,0,.23)}
+td{color:#f8f0ff}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border-radius:999px;border:1px solid var(--line);background:rgba(201,167,255,.09);color:var(--lilac);font-size:9px;font-weight:850;white-space:nowrap}
+.pill.good{color:#c7ffda;background:rgba(68,209,124,.13);border-color:rgba(68,209,124,.4)}
+.pill.warn{color:#ffe8ac;background:rgba(242,189,75,.13);border-color:rgba(242,189,75,.4)}
+.pill.bad{color:#ffd8e0;background:rgba(224,82,115,.13);border-color:rgba(224,82,115,.4)}
+.notice{padding:9px;border:1px solid var(--line);border-radius:12px;background:rgba(201,167,255,.10);font-size:10.5px;color:var(--soft);line-height:1.38}
+.checklist{display:grid;gap:6px}
+.item{
+  display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:start;
+  padding:8px;border:1px solid rgba(201,167,255,.15);border-radius:12px;background:rgba(255,255,255,.055);
+}
+.item input[type=checkbox]{width:auto;margin-top:3px}
+.item.done{opacity:.58}.item.done b{text-decoration:line-through}
+.item b{font-size:13px}.item small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.timeline{position:relative;display:grid;gap:7px}
+.timeline:before{content:"";position:absolute;left:12px;top:5px;bottom:5px;width:2px;background:rgba(201,167,255,.20)}
+.timeItem{position:relative;padding-left:30px}
+.timeItem:before{content:"";position:absolute;left:3px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--lilac);box-shadow:0 0 26px rgba(201,167,255,.56)}
+.timeItem b{font-size:11px}.timeItem small{display:block;font-size:9.5px;color:var(--muted);margin:1px 0 3px}
+.kpi{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}.kpi:last-child{border-bottom:none}
+.bar{height:8px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid var(--line);overflow:hidden}.bar span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--lilac),var(--purple))}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:7px;margin-top:10px}
+.fileCard{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:rgba(255,255,255,.06)}
+.fileCard img{width:100%;height:88px;object-fit:cover;display:block}
+.fileCard .fileIcon{height:88px;display:grid;place-items:center;font-size:19px;color:var(--lilac)}
+.fileCard div:last-child{padding:6px;font-size:9px;color:var(--muted);word-break:break-word}
+.toast{position:fixed;right:18px;bottom:18px;z-index:99;display:none;max-width:380px;padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:#150c1f;color:var(--ink);box-shadow:var(--shadow);font-size:13px}
+.toast.show{display:block;animation:rise .18s ease both}
+.printPacket{display:none;background:white;color:#111;padding:26px;border-radius:18px}
+.printPacket h1,.printPacket h2,.printPacket h3{font-family:"Playfair Display",serif;color:#111}
+.printPacket p,.printPacket li,.printPacket td,.printPacket th{color:#111}
+.printPacket table{min-width:0}
+@media(max-width:1040px){
+  .app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.nav{grid-template-columns:repeat(2,1fr)}.main{padding:17px}.title h2{font-size:24px}
+  .stats{grid-template-columns:repeat(2,1fr)}.col8,.col7,.col6,.col5,.col4,.col3{grid-column:span 12}.inputGrid{grid-template-columns:1fr}
+}
+@media print{
+  body{background:white!important;color:#111}body:before,.sidebar,.topbar,.stats,.panel,.toast{display:none!important}
+  .app{display:block}.main{padding:0;max-width:none}.printPacket{display:block!important;border-radius:0;padding:0}
+  @page{size:letter portrait;margin:.42in}
+}
+
+/* ===== Compact Professional Command Center Override ===== */
+.sidebar::-webkit-scrollbar,
+.main::-webkit-scrollbar,
+.tableWrap::-webkit-scrollbar{height:6px;width:6px}
+.sidebar::-webkit-scrollbar-thumb,
+.main::-webkit-scrollbar-thumb,
+.tableWrap::-webkit-scrollbar-thumb{background:rgba(201,167,255,.28);border-radius:999px}
+
+.brand h1{letter-spacing:-.02em}
+.brand .mini{font-size:9px}
+.nav button{min-height:34px}
+.nav button span{font-size:9px}
+.sideTools .tool{min-height:34px}
+
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:20;
+  padding:10px 0 8px;
+  background:linear-gradient(180deg,rgba(5,3,7,.96),rgba(5,3,7,.82),rgba(5,3,7,0));
+  backdrop-filter:blur(10px);
+}
+.actions{gap:6px}
+.panel{min-height:calc(100vh - 150px)}
+.card{border-radius:16px}
+.card h3{letter-spacing:-.015em}
+.card h4{font-size:10px;margin:7px 0 5px}
+.stats .stat{min-height:70px}
+.inputGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+textarea#seatingNotes{min-height:190px}
+#aiOutput{max-height:310px;overflow:auto}
+#timelineList,
+#taskList,
+#guestRows,
+#vendorRows,
+#budgetRows,
+#ideaList,
+#fileGallery{
+  scrollbar-width:thin;
+}
+#taskList.checklist,
+#ideaList.checklist{
+  max-height:520px;
+  overflow:auto;
+  padding-right:3px;
+}
+#timelineList.timeline{
+  max-height:540px;
+  overflow:auto;
+  padding-right:3px;
+}
+.tableWrap{
+  max-height:540px;
+  overflow:auto;
+}
+.tableWrap thead th{
+  position:sticky;
+  top:0;
+  z-index:5;
+  background:#160b20;
+}
+.item{
+  grid-template-columns:auto 1fr auto;
+  min-height:44px;
+}
+.item b{font-size:11px}
+.item small{font-size:9.5px}
+.kpi{font-size:11px;padding:6px 0}
+.notice b{color:white}
+.fileCard{border-radius:12px}
+.col12 .card,.card.col12{padding:14px}
+@media(min-width:1041px){
+  .main{height:100vh;overflow:auto}
+  .sidebar{height:100vh}
+}
+@media(max-width:1040px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .nav{grid-template-columns:repeat(3,1fr)}
+  .topbar{position:relative}
+}
+@media print{
+  .printPacket{font-size:10.5px}
+  .printPacket h1{font-size:24px}
+  .printPacket h2{font-size:16px;margin-top:10px}
+  .printPacket td,.printPacket th{padding:5px 6px;font-size:9px}
+}
+
+</style>
+</head>
+
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mini">Private Planner</div>
+      <h1>Wedding<br>Command Center</h1>
+      <p>Tyler & Julie wedding control system: timeline, RSVP, vendors, files, budget, seating, PDFs, and final-day execution.</p>
+      <div class="syncDot"><i class="dot" id="syncDot"></i><span id="syncText">Connecting Firebase...</span></div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button class="active" data-panel="dashboard">Dashboard <span>01</span></button>
+      <button data-panel="assistant">AI Planner <span>02</span></button>
+      <button data-panel="timeline">Timeline <span>03</span></button>
+      <button data-panel="checklist">Checklist <span>04</span></button>
+      <button data-panel="guests">Guests / RSVP <span>05</span></button>
+      <button data-panel="vendors">Vendors <span>06</span></button>
+      <button data-panel="budget">Budget <span>07</span></button>
+      <button data-panel="seating">Seating <span>08</span></button>
+      <button data-panel="creative">Ideas <span>09</span></button>
+      <button data-panel="files">Files <span>10</span></button>
+      <button data-panel="packets">PDF Packets <span>11</span></button>
+      <button data-panel="settings">Settings <span>12</span></button>
+    </nav>
+
+    <div class="sideTools">
+      <button class="tool" onclick="saveAll()">Save Everything</button>
+      <button class="tool dark" onclick="pullGoogleSheet()">Pull Google Sheet RSVP</button>
+      <button class="tool dark" onclick="buildPacket('master');window.print()">Print Master Packet</button>
+      <button class="tool dark" onclick="downloadPacket('master')">Download PDF</button>
+      <button class="tool dark" onclick="exportJSON()">Export Backup</button>
+      <label class="tool dark">Import Backup<input type="file" accept="application/json" onchange="importJSON(event)" style="display:none"></label>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="title">
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageSub">Compact private wedding control system for 10/24/2026: tasks, RSVP, vendors, files, payments, seating, timeline, and PDF packets.</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary" onclick="pullGoogleSheet()">Pull RSVP Sheet</button>
+        <button class="btn" onclick="quickAddTask()">Quick Add Task</button>
+        <button class="btn" onclick="downloadPacket('master')">Email-Ready PDF</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="daysOut">--</b><small>Days Until Wedding</small></div>
+      <div class="stat"><b id="donePct">0%</b><small>Checklist Complete</small></div>
+      <div class="stat"><b id="yesCount">0</b><small>RSVP Yes</small></div>
+      <div class="stat"><b id="budgetLeft">$0</b><small>Budget Remaining</small></div>
+      <div class="stat"><b id="fileCount">0</b><small>Files Saved</small></div>
+    </div>
+
+    <section class="panel active" id="dashboard">
+      <div class="grid">
+        <div class="card col8">
+          <h3>Master Wedding Snapshot</h3>
+          <div class="inputGrid">
+            <div><label>Couple</label><input id="coupleName" value="Tyler Hawthorne & Julie Eells"></div>
+            <div><label>Wedding Date</label><input id="weddingDate" type="date" value="2026-10-24"></div>
+            <div><label>Venue</label><input id="venueName" value="The Conservatory, Acworth GA"></div>
+            <div><label>Wedding Time</label><input id="weddingTime" value="5:00 PM – 10:00 PM"></div>
+            <div><label>Colors</label><input id="colorPalette" value="Matte Black, Lilac, Plum, Candlelight"></div>
+            <div><label>Theme</label><input id="theme" value="Elegant Halloween / Dark Romantic"></div>
+            <div><label>Google Sheet ID</label><input id="sheetId" value="1uY8dfFvN_cOm5y9BEROTLyPSLqNy-yOPNFkNi4naOs4"></div>
+            <div><label>Sheet Tab Name</label><input id="sheetName" value="Form Responses 1"></div>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" onclick="saveAll()">Save Snapshot</button>
+            <button class="btn" onclick="loadSmartDefaults()">Reload Smart Defaults</button>
+            <button class="btn" onclick="downloadPacket('master')">Build PDF</button>
+          </div>
+        </div>
+
+        <div class="card col4">
+          <h3>Planning Health</h3>
+          <div class="kpi"><span>Guests Tracked</span><b id="guestKpi">0</b></div>
+          <div class="kpi"><span>Vendors</span><b id="vendorKpi">0</b></div>
+          <div class="kpi"><span>Open Tasks</span><b id="taskKpi">0</b></div>
+          <div class="kpi"><span>Budget Used</span><b id="budgetUsedKpi">$0</b></div>
+          <div style="margin-top:12px" class="bar"><span id="healthBar"></span></div>
+        </div>
+
+        <div class="card col6">
+          <h3>Immediate Focus</h3>
+          <div id="focusList" class="checklist"></div>
+        </div>
+
+        <div class="card col6">
+          <h3>Critical Decisions</h3>
+          <div id="decisionList" class="timeline"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="assistant">
+      <div class="grid">
+        <div class="card col7">
+          <h3>Wedding AI Planner</h3>
+          <p class="muted">Built-in planning assistant based on your saved tracker. It gives action plans, forgotten items, final-week lists, and vendor packet guidance without needing an API.</p>
+          <label style="margin-top:12px">Ask the planner</label>
+          <textarea id="aiPrompt" placeholder="Ask: What are we forgetting? Build a final week plan. What should we focus on this month?"></textarea>
+          <div class="actions" style="margin-top:10px">
+            <button class="btn primary" onclick="runAssistant()">Generate Plan</button>
+            <button class="btn" onclick="assistantForgotten()">Forgotten Items</button>
+            <button class="btn" onclick="assistantFinalWeek()">Final Week Plan</button>
+            <button class="btn" onclick="assistantVendorPackets()">Vendor Packets</button>
+          </div>
+          <div class="card" id="aiOutput" style="margin-top:14px;background:rgba(0,0,0,.24)">
+            <h4>Assistant Output</h4>
+            <p class="muted">Generated plan appears here.</p>
+          </div>
+        </div>
+
+        <div class="card col5">
+          <h3>Smart Questions To Keep Inside App</h3>
+          <ul>
+            <li>Who is the final decision-maker for vendor questions on wedding day?</li>
+            <li>What time can vendors load in and when must they load out?</li>
+            <li>Who handles cards/gifts at the end of the night?</li>
+            <li>Who gets the marriage license after ceremony?</li>
+            <li>Who owns the emergency kit, rings, vows, and final payments?</li>
+            <li>What happens if a guest brings an unapproved plus-one?</li>
+            <li>What photos are non-negotiable?</li>
+            <li>What songs are banned?</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="timeline">
+      <div class="grid">
+        <div class="card col5">
+          <h3>Add Timeline Item</h3>
+          <div class="inputGrid">
+            <div><label>Phase / Date</label><input id="tlDate" placeholder="Final week / 6 months out"></div>
+            <div><label>Owner</label><input id="tlOwner" placeholder="Tyler / Julie / Vendor"></div>
+            <div style="grid-column:1/-1"><label>Title</label><input id="tlTitle"></div>
+            <div style="grid-column:1/-1"><label>Notes</label><textarea id="tlNotes"></textarea></div>
+          </div>
+          <button class="btn primary" onclick="addTimeline()" style="margin-top:10px">Add Timeline</button>
+        </div>
+        <div class="card col7"><h3>Master Timeline</h3><div id="timelineList" class="timeline"></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="checklist">
+      <div class="grid">
+        <div class="card col4">
+          <h3>Add Task</h3>
+          <div class="inputGrid">
+            <div style="grid-column:1/-1"><label>Task</label><input id="taskName"></div>
+            <div><label>Category</label><select id="taskCategory"><option>Planning</option><option>Venue</option><option>Food & Bar</option><option>Guest List</option><option>Decor</option><option>Wedding Party</option><option>Legal</option><option>Payments</option><option>Music</option><option>Photo/Video</option><option>Final Week</option></select></div>
+            <div><label>Owner</label><input id="taskOwner"></div>
+            <div style="grid-column:1/-1"><label>Due</label><input id="taskDue" type="date"></div>
+          </div>
+          <button class="btn primary" onclick="addTask()" style="margin-top:10px">Add Task</button>
+        </div>
+        <div class="card col8"><h3>Master Checklist</h3><div id="taskList" class="checklist"></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="guests">
+      <div class="grid">
+        <div class="card col4">
+          <h3>Add Guest</h3>
+          <div class="inputGrid">
+            <div style="grid-column:1/-1"><label>Name</label><input id="guestName"></div>
+            <div><label>Side</label><select id="guestSide"><option>Bride</option><option>Groom</option><option>Both</option><option>Family</option><option>Friend</option><option>Vendor</option></select></div>
+            <div><label>RSVP</label><select id="guestRsvp"><option>Pending</option><option>Yes</option><option>No</option></select></div>
+            <div><label>Meal</label><input id="guestMeal"></div>
+            <div><label>Table</label><input id="guestTable"></div>
+            <div><label>Plus One</label><input id="guestPlus"></div>
+            <div style="grid-column:1/-1"><label>Notes / Allergies</label><textarea id="guestNotes"></textarea></div>
+          </div>
+          <button class="btn primary" onclick="addGuest()" style="margin-top:10px">Add Guest</button>
+        </div>
+        <div class="card col8">
+          <h3>Guest + RSVP Tracker</h3>
+          <div class="notice">This file will try to pull your Google Sheet using public CSV/GViz. If the Sheet is private, Google blocks front-end reads. The fix is: File → Share → Anyone with link can view, or later add Apps Script for private sync/write-back.</div>
+          <div class="actions" style="margin-top:10px">
+            <button class="btn primary" onclick="pullGoogleSheet()">Pull Google Sheet Now</button>
+            <button class="btn" onclick="downloadCSV()">Export Guest CSV</button>
+          </div>
+          <div class="tableWrap"><table><thead><tr><th>Name</th><th>Side</th><th>RSVP</th><th>Meal</th><th>Table</th><th>Plus One</th><th>Notes</th><th></th></tr></thead><tbody id="guestRows"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="vendors">
+      <div class="grid">
+        <div class="card col4">
+          <h3>Add Vendor</h3>
+          <div class="inputGrid">
+            <div style="grid-column:1/-1"><label>Vendor</label><input id="vendorName"></div>
+            <div><label>Category</label><input id="vendorCategory"></div>
+            <div><label>Contact</label><input id="vendorContact"></div>
+            <div><label>Phone</label><input id="vendorPhone"></div>
+            <div><label>Total</label><input id="vendorTotal" type="number" step="0.01"></div>
+            <div><label>Paid</label><input id="vendorPaid" type="number" step="0.01"></div>
+            <div style="grid-column:1/-1"><label>Arrival / Load-In</label><input id="vendorArrival"></div>
+            <div style="grid-column:1/-1"><label>Notes</label><textarea id="vendorNotes"></textarea></div>
+          </div>
+          <button class="btn primary" onclick="addVendor()" style="margin-top:10px">Add Vendor</button>
+        </div>
+        <div class="card col8"><h3>Vendor Command List</h3><div class="tableWrap"><table><thead><tr><th>Vendor</th><th>Category</th><th>Contact</th><th>Arrival</th><th>Total</th><th>Paid</th><th>Balance</th><th></th></tr></thead><tbody id="vendorRows"></tbody></table></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="budget">
+      <div class="grid">
+        <div class="card col4">
+          <h3>Add Budget Item</h3>
+          <div class="inputGrid">
+            <div style="grid-column:1/-1"><label>Item</label><input id="budgetItem"></div>
+            <div><label>Category</label><select id="budgetCategory"><option>Venue</option><option>Food</option><option>Bar</option><option>Photo/Video</option><option>DJ</option><option>Decor</option><option>Attire</option><option>Beauty</option><option>Gifts</option><option>Printing</option><option>Misc</option></select></div>
+            <div><label>Estimate</label><input id="budgetEstimate" type="number" step="0.01"></div>
+            <div><label>Actual</label><input id="budgetActual" type="number" step="0.01"></div>
+          </div>
+          <button class="btn primary" onclick="addBudget()" style="margin-top:10px">Add Budget</button>
+        </div>
+        <div class="card col8">
+          <h3>Budget Tracker</h3>
+          <div class="inputGrid">
+            <div><label>Total Budget</label><input id="totalBudget" type="number" value="10000" onchange="saveAll()"></div>
+            <div><label>Emergency Cushion</label><input id="cushion" type="number" value="750" onchange="saveAll()"></div>
+          </div>
+          <div class="tableWrap"><table><thead><tr><th>Item</th><th>Category</th><th>Estimate</th><th>Actual</th><th>Diff</th><th></th></tr></thead><tbody id="budgetRows"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="seating">
+      <div class="grid">
+        <div class="card col5">
+          <h3>Seating Notes</h3>
+          <textarea id="seatingNotes">Table 1: Immediate family
+Table 2: Wedding party
+Table 3: Friends
+Table 4: Extended family</textarea>
+          <div class="actions" style="margin-top:10px"><button class="btn primary" onclick="autoBuildSeating(true)">Build From Guests</button></div>
+        </div>
+        <div class="card col7"><h3>Table Assignments</h3><div id="seatingOutput" class="notice"></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="creative">
+      <div class="grid">
+        <div class="card col6"><h3>Cool Wedding Ideas</h3><div id="ideaList" class="checklist"></div></div>
+        <div class="card col6">
+          <h3>Add Idea</h3>
+          <label>Idea</label><input id="ideaName">
+          <label style="margin-top:10px">Notes</label><textarea id="ideaNotes"></textarea>
+          <button class="btn primary" onclick="addIdea()" style="margin-top:10px">Add Idea</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="files">
+      <div class="grid">
+        <div class="card col5">
+          <h3>Firebase Storage Uploads</h3>
+          <div class="notice">Uploads save to Firebase Storage folder <b>wedding-command-center/</b>. Metadata saves to Firestore and localStorage.</div>
+          <label style="margin-top:12px">Upload files</label>
+          <input type="file" multiple onchange="uploadFiles(event)">
+          <div class="actions" style="margin-top:10px"><button class="btn" onclick="refreshCloud()">Refresh Cloud Data</button></div>
+        </div>
+        <div class="card col7"><h3>File Library</h3><div id="fileGallery" class="gallery"></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="packets">
+      <div class="grid">
+        <div class="card col12">
+          <h3>PDF Packet Builder</h3>
+          <p class="muted">Build clean packets that can be printed, saved, texted, or emailed.</p>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" onclick="downloadPacket('master')">Master Packet</button>
+            <button class="btn" onclick="downloadPacket('vendor')">Vendor Packet</button>
+            <button class="btn" onclick="downloadPacket('party')">Wedding Party Packet</button>
+            <button class="btn" onclick="downloadPacket('guest')">Guest / RSVP Packet</button>
+            <button class="btn" onclick="downloadPacket('final')">Final Week Packet</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="settings">
+      <div class="grid">
+        <div class="card col6">
+          <h3>Firebase Status</h3>
+          <div class="notice">Firebase is hard-wired with your config. Firestore collection: <b>weddingCommandCenter</b>. Storage folder: <b>wedding-command-center</b>.</div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" onclick="saveCloud()">Save To Firebase</button>
+            <button class="btn" onclick="refreshCloud()">Pull From Firebase</button>
+          </div>
+        </div>
+        <div class="card col6">
+          <h3>Google Sheet Settings</h3>
+          <div class="inputGrid">
+            <div style="grid-column:1/-1"><label>Sheet ID</label><input id="sheetIdSettings" value="1uY8dfFvN_cOm5y9BEROTLyPSLqNy-yOPNFkNi4naOs4"></div>
+            <div><label>Tab Name</label><input id="sheetNameSettings" value="Form Responses 1"></div>
+            <div><label>Optional Apps Script URL</label><input id="scriptUrl" placeholder="Later: https://script.google.com/macros/s/.../exec"></div>
+          </div>
+          <div class="actions" style="margin-top:10px">
+            <button class="btn primary" onclick="saveSheetSettings()">Save Sheet Settings</button>
+            <button class="btn" onclick="pullGoogleSheet()">Test Pull</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="printPacket" id="printPacket"></section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD5FbcEeVB0lQT6ucS8hli2pwNAMdrNhqg",
+  authDomain: "wedding-app-db1d4.firebaseapp.com",
+  projectId: "wedding-app-db1d4",
+  storageBucket: "wedding-app-db1d4.firebasestorage.app",
+  messagingSenderId: "419604210273",
+  appId: "1:419604210273:web:e7732fbdefe6fc97a44020"
+};
+
+const STORAGE_KEY="wedding_command_center_final_v1";
+const FIRESTORE_COLLECTION="weddingCommandCenter";
+const FIRESTORE_DOC="masterPlan";
+const STORAGE_FOLDER="wedding-command-center";
+
+let db=null, storage=null, cloudReady=false, loadingCloud=false;
+
+let state={
+  form:{},
+  tasks:[],
+  timeline:[],
+  guests:[],
+  vendors:[],
+  budget:[],
+  ideas:[],
+  files:[],
+  settings:{
+    sheetId:"1uY8dfFvN_cOm5y9BEROTLyPSLqNy-yOPNFkNi4naOs4",
+    sheetName:"Form Responses 1",
+    scriptUrl:""
+  }
+};
+
+const formIds=["coupleName","weddingDate","venueName","weddingTime","colorPalette","theme","sheetId","sheetName","sheetIdSettings","sheetNameSettings","scriptUrl","totalBudget","cushion","seatingNotes"];
+
+function $(id){return document.getElementById(id)}
+function val(id){return $(id)?.value||""}
+function setVal(id,v){if($(id)) $(id).value=v??""}
+function money(n){return "$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}
+function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),3000)}
+function setSync(status,msg){
+  $("syncDot").className="dot "+(status||"");
+  $("syncText").textContent=msg;
+}
+
+document.querySelectorAll(".nav button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    $(btn.dataset.panel).classList.add("active");
+    $("pageTitle").textContent=btn.childNodes[0].textContent.trim();
+  });
+});
+
+function loadSmartDefaults(){
+  state.tasks=[
+    {id:uid(),name:"Confirm final guest list and RSVP cutoff date",category:"Guest List",due:"2026-08-24",owner:"Tyler & Julie",done:false},
+    {id:uid(),name:"Lock final menu, bar package, signature drinks, and late-night snack plan",category:"Food & Bar",due:"2026-07-24",owner:"Tyler",done:false},
+    {id:uid(),name:"Create photographer shot list and family photo order",category:"Photo/Video",due:"2026-09-20",owner:"Julie",done:false},
+    {id:uid(),name:"Build DJ must-play, do-not-play, entrances, first dance, and last dance list",category:"Music",due:"2026-09-15",owner:"Both",done:false},
+    {id:uid(),name:"Finalize ceremony wording, vows, processional order, rings, and marriage license plan",category:"Legal",due:"2026-09-24",owner:"Both",done:false},
+    {id:uid(),name:"Confirm hotel block, transportation, parking, and guest arrival details",category:"Guest List",due:"2026-08-15",owner:"Tyler",done:false},
+    {id:uid(),name:"Build emergency kit, vendor contact sheet, payment envelopes, and final week packet",category:"Final Week",due:"2026-10-10",owner:"Julie",done:false},
+    {id:uid(),name:"Print signs, table numbers, seating chart, bar menu, welcome sign, and timeline packet",category:"Decor",due:"2026-10-15",owner:"Both",done:false},
+    {id:uid(),name:"Assign wedding party jobs: gifts/cards, bustle, rings, vows, family photos, vendor questions",category:"Wedding Party",due:"2026-10-01",owner:"Both",done:false},
+    {id:uid(),name:"Confirm vendor arrival times, load-in rules, meal count, balances, and gratuity plan",category:"Vendors",due:"2026-10-05",owner:"Tyler",done:false}
+  ];
+  state.timeline=[
+    {id:uid(),date:"12–9 months out",title:"Lock venue, vision, budget, guest list draft, core vendor priorities",owner:"Both",notes:"Private app stays separate from public wedding site."},
+    {id:uid(),date:"9–6 months out",title:"Book DJ, photographer/video, catering/bar direction, hotel block, attire",owner:"Both",notes:"Track deposits and contracts in vendor tab."},
+    {id:uid(),date:"6–3 months out",title:"Finalize decor direction, invitations, registry, wedding party attire, ceremony structure",owner:"Julie",notes:"Start seating rough draft and music list."},
+    {id:uid(),date:"3–1 months out",title:"Finalize RSVP count, menu, bar, day-of timeline, music, rentals, signage, beauty schedule",owner:"Both",notes:"Begin packet building."},
+    {id:uid(),date:"Final month",title:"Confirm all vendors, balances, load-in, family photo list, final print pieces, emergency kit",owner:"Tyler",notes:"No major new decisions inside final week unless critical."},
+    {id:uid(),date:"Final week",title:"Print master packet, vendor packets, wedding party job sheet, seating chart, and payment envelope list",owner:"Both",notes:"One point person controls all questions."},
+    {id:uid(),date:"Wedding day",title:"Follow minute-by-minute timeline; protect couple from questions",owner:"Coordinator / Assigned Lead",notes:"Tyler & Julie should not manage logistics day-of."}
+  ];
+  state.vendors=[
+    {id:uid(),name:"The Conservatory",category:"Venue",contact:"",phone:"",arrival:"Confirm access/load-in time",total:0,paid:0,notes:"Confirm rain plan, cleanup rules, power, parking, vendor load-in."},
+    {id:uid(),name:"DJ / Entertainment",category:"Music",contact:"",phone:"",arrival:"",total:0,paid:0,notes:"Ceremony audio, reception intros, must-play, do-not-play, announcements."},
+    {id:uid(),name:"Photographer",category:"Photo/Video",contact:"",phone:"",arrival:"",total:0,paid:0,notes:"Shot list, first look, detail shots, family photo order."},
+    {id:uid(),name:"Catering / Bar",category:"Food & Bar",contact:"",phone:"",arrival:"",total:0,paid:0,notes:"Tex-Mex spread, full bar, signature drinks: Hot Blooded + Sweet Heat."},
+    {id:uid(),name:"Florals / Decor",category:"Decor",contact:"",phone:"",arrival:"",total:0,paid:0,notes:"Black/lilac/plum/candlelight styling."}
+  ];
+  state.budget=[
+    {id:uid(),item:"Venue",category:"Venue",estimate:0,actual:0},
+    {id:uid(),item:"Food / Catering",category:"Food",estimate:0,actual:0},
+    {id:uid(),item:"Bar",category:"Bar",estimate:0,actual:0},
+    {id:uid(),item:"DJ",category:"DJ",estimate:0,actual:0},
+    {id:uid(),item:"Photography / Video",category:"Photo/Video",estimate:0,actual:0},
+    {id:uid(),item:"Decor / Candles / Florals",category:"Decor",estimate:0,actual:0},
+    {id:uid(),item:"Attire / Alterations",category:"Attire",estimate:0,actual:0},
+    {id:uid(),item:"Printing / Signs / Favors",category:"Printing",estimate:0,actual:0},
+    {id:uid(),item:"Emergency Cushion",category:"Misc",estimate:750,actual:0}
+  ];
+  state.ideas=[
+    {id:uid(),name:"Haunted audio guestbook",notes:"Antique phone or dark lilac station where guests leave messages."},
+    {id:uid(),name:"VHS-style video guest booth",notes:"Guests record short messages with glitch frame backdrop."},
+    {id:uid(),name:"Black envelope vow cards",notes:"Private vows or anniversary letters."},
+    {id:uid(),name:"Signature drink sign",notes:"Hot Blooded for groom, Sweet Heat for bride."},
+    {id:uid(),name:"Candlelit table numbers",notes:"Black acrylic or lilac backlit table markers."},
+    {id:uid(),name:"Private last dance",notes:"Clear room at end for one private song."},
+    {id:uid(),name:"Wedding party QR reveal cards",notes:"Use same scary style for party proposal pages."},
+    {id:uid(),name:"Memory table with dark romantic styling",notes:"Candlelight, black frame photos, subtle lilac florals."}
+  ];
+  saveAll();
+  renderAll();
+  toast("Smart defaults loaded.");
+}
+
+function collectForm(){
+  formIds.forEach(id=>{if($(id))state.form[id]=val(id)});
+  state.settings.sheetId=val("sheetId")||val("sheetIdSettings")||state.settings.sheetId;
+  state.settings.sheetName=val("sheetName")||val("sheetNameSettings")||state.settings.sheetName;
+  state.settings.scriptUrl=val("scriptUrl")||state.settings.scriptUrl;
+}
+function applyForm(){
+  Object.entries(state.form||{}).forEach(([k,v])=>setVal(k,v));
+  setVal("sheetId",state.settings.sheetId);
+  setVal("sheetIdSettings",state.settings.sheetId);
+  setVal("sheetName",state.settings.sheetName);
+  setVal("sheetNameSettings",state.settings.sheetName);
+  setVal("scriptUrl",state.settings.scriptUrl);
+}
+function saveLocal(){
+  collectForm();
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+}
+async function saveCloud(){
+  if(!cloudReady){toast("Firebase is not connected yet.");return}
+  saveLocal();
+  try{
+    await db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC).set({...state,updatedAt:new Date().toISOString()},{merge:true});
+    setSync("good","Saved to Firebase");
+    toast("Saved to Firebase.");
+  }catch(e){
+    setSync("bad","Firebase save blocked");
+    toast("Firebase save failed. Check Firestore rules.");
+  }
+}
+async function saveAll(){
+  saveLocal();
+  renderStats();
+  if(cloudReady && !loadingCloud){
+    try{await db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC).set({...state,updatedAt:new Date().toISOString()},{merge:true});setSync("good","Autosaved to Firebase")}catch(e){setSync("bad","Local saved; cloud blocked")}
+  }else toast("Saved locally.");
+}
+async function refreshCloud(){
+  if(!cloudReady){toast("Firebase is not connected.");return}
+  loadingCloud=true;
+  try{
+    const snap=await db.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC).get();
+    if(snap.exists){
+      const data=snap.data();
+      state={...state,...data};
+      applyForm();
+      saveLocal();
+      renderAll();
+      setSync("good","Pulled from Firebase");
+      toast("Pulled latest Firebase data.");
+    }else{
+      await saveCloud();
+    }
+  }catch(e){
+    setSync("bad","Could not pull Firebase");
+    toast("Firebase pull failed. Check Firestore rules.");
+  }
+  loadingCloud=false;
+}
+
+function initFirebase(){
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    storage=firebase.storage();
+    cloudReady=true;
+    setSync("good","Firebase connected");
+    refreshCloud();
+  }catch(e){
+    cloudReady=false;
+    setSync("bad","Firebase failed; local mode");
+  }
+}
+
+function loadLocal(){
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(raw){try{state=JSON.parse(raw)}catch(e){}}
+  applyForm();
+  if(!state.tasks?.length && !state.timeline?.length) loadSmartDefaults();
+  renderAll();
+}
+
+function renderAll(){
+  renderStats();renderTasks();renderTimeline();renderGuests();renderVendors();renderBudget();renderIdeas();renderFiles();autoBuildSeating(false);
+}
+
+function renderStats(){
+  const d=new Date(val("weddingDate")||"2026-10-24");
+  const now=new Date();
+  const days=Math.ceil((d-now)/(1000*60*60*24));
+  $("daysOut").textContent=isFinite(days)?days:"--";
+  const totalTasks=state.tasks.length||1, done=state.tasks.filter(t=>t.done).length, pct=Math.round(done/totalTasks*100);
+  $("donePct").textContent=pct+"%";$("healthBar").style.width=pct+"%";
+  $("yesCount").textContent=state.guests.filter(g=>String(g.rsvp).toLowerCase()==="yes").length;
+  const actual=state.budget.reduce((s,b)=>s+Number(b.actual||0),0);
+  const total=Number(val("totalBudget")||0);
+  $("budgetLeft").textContent=money(total-actual);
+  $("fileCount").textContent=state.files.length;
+  $("guestKpi").textContent=state.guests.length;
+  $("vendorKpi").textContent=state.vendors.length;
+  $("taskKpi").textContent=state.tasks.filter(t=>!t.done).length;
+  $("budgetUsedKpi").textContent=money(actual);
+  $("focusList").innerHTML=state.tasks.filter(t=>!t.done).slice(0,6).map(taskHTML).join("")||"<p class='muted'>No open tasks.</p>";
+  $("decisionList").innerHTML=state.timeline.slice(-5).map(t=>`<div class="timeItem"><b>${esc(t.title)}</b><small>${esc(t.date)} • ${esc(t.owner)}</small><p>${esc(t.notes)}</p></div>`).join("");
+}
+
+function taskHTML(t){return `<div class="item ${t.done?'done':''}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')"><div><b>${esc(t.name)}</b><small>${esc(t.category)} • Due: ${esc(t.due)} • Owner: ${esc(t.owner)}</small></div><button class="btn bad" onclick="deleteItem('tasks','${t.id}')">Delete</button></div>`}
+function renderTasks(){$("taskList").innerHTML=state.tasks.map(taskHTML).join("")}
+function addTask(){state.tasks.unshift({id:uid(),name:val("taskName"),category:val("taskCategory"),owner:val("taskOwner"),due:val("taskDue"),done:false});["taskName","taskOwner","taskDue"].forEach(id=>setVal(id,""));saveAll();renderAll()}
+function quickAddTask(){const name=prompt("Quick task:");if(name){state.tasks.unshift({id:uid(),name,category:"Quick Add",owner:"",due:"",done:false});saveAll();renderAll()}}
+function toggleTask(id){const t=state.tasks.find(x=>x.id===id);if(t)t.done=!t.done;saveAll();renderAll()}
+
+function renderTimeline(){$("timelineList").innerHTML=state.timeline.map(t=>`<div class="timeItem"><b>${esc(t.title)}</b><small>${esc(t.date)} • ${esc(t.owner)}</small><p>${esc(t.notes)}</p><button class="btn bad" onclick="deleteItem('timeline','${t.id}')">Delete</button></div>`).join("")}
+function addTimeline(){state.timeline.push({id:uid(),date:val("tlDate"),title:val("tlTitle"),owner:val("tlOwner"),notes:val("tlNotes")});["tlDate","tlTitle","tlOwner","tlNotes"].forEach(id=>setVal(id,""));saveAll();renderAll()}
+
+function renderGuests(){
+  $("guestRows").innerHTML=state.guests.map(g=>`<tr><td>${esc(g.name)}</td><td>${esc(g.side)}</td><td><span class="pill ${String(g.rsvp).toLowerCase()==='yes'?'good':String(g.rsvp).toLowerCase()==='no'?'bad':'warn'}">${esc(g.rsvp||"Pending")}</span></td><td>${esc(g.meal)}</td><td>${esc(g.table)}</td><td>${esc(g.plus)}</td><td>${esc(g.notes)}</td><td><button class="btn bad" onclick="deleteItem('guests','${g.id}')">Delete</button></td></tr>`).join("");
+}
+function addGuest(){
+  state.guests.push({id:uid(),name:val("guestName"),side:val("guestSide"),rsvp:val("guestRsvp"),meal:val("guestMeal"),table:val("guestTable"),plus:val("guestPlus"),notes:val("guestNotes")});
+  ["guestName","guestMeal","guestTable","guestPlus","guestNotes"].forEach(id=>setVal(id,""));saveAll();renderAll()
+}
+
+function renderVendors(){
+  $("vendorRows").innerHTML=state.vendors.map(v=>`<tr><td>${esc(v.name)}</td><td>${esc(v.category)}</td><td>${esc(v.contact)}<br>${esc(v.phone)}</td><td>${esc(v.arrival)}</td><td>${money(v.total)}</td><td>${money(v.paid)}</td><td>${money(Number(v.total||0)-Number(v.paid||0))}</td><td><button class="btn bad" onclick="deleteItem('vendors','${v.id}')">Delete</button></td></tr>`).join("");
+}
+function addVendor(){
+  state.vendors.push({id:uid(),name:val("vendorName"),category:val("vendorCategory"),contact:val("vendorContact"),phone:val("vendorPhone"),arrival:val("vendorArrival"),total:Number(val("vendorTotal")),paid:Number(val("vendorPaid")),notes:val("vendorNotes")});
+  ["vendorName","vendorCategory","vendorContact","vendorPhone","vendorArrival","vendorTotal","vendorPaid","vendorNotes"].forEach(id=>setVal(id,""));saveAll();renderAll()
+}
+
+function renderBudget(){
+  $("budgetRows").innerHTML=state.budget.map(b=>`<tr><td>${esc(b.item)}</td><td>${esc(b.category)}</td><td>${money(b.estimate)}</td><td>${money(b.actual)}</td><td>${money(Number(b.estimate||0)-Number(b.actual||0))}</td><td><button class="btn bad" onclick="deleteItem('budget','${b.id}')">Delete</button></td></tr>`).join("");
+}
+function addBudget(){
+  state.budget.push({id:uid(),item:val("budgetItem"),category:val("budgetCategory"),estimate:Number(val("budgetEstimate")),actual:Number(val("budgetActual"))});
+  ["budgetItem","budgetEstimate","budgetActual"].forEach(id=>setVal(id,""));saveAll();renderAll()
+}
+
+function renderIdeas(){
+  $("ideaList").innerHTML=state.ideas.map(i=>`<div class="item"><span class="pill">IDEA</span><div><b>${esc(i.name)}</b><small>${esc(i.notes)}</small></div><button class="btn bad" onclick="deleteItem('ideas','${i.id}')">Delete</button></div>`).join("");
+}
+function addIdea(){state.ideas.unshift({id:uid(),name:val("ideaName"),notes:val("ideaNotes")});setVal("ideaName","");setVal("ideaNotes","");saveAll();renderAll()}
+
+function renderFiles(){
+  $("fileGallery").innerHTML=state.files.map(f=>`<div class="fileCard">${f.url&&f.type&&f.type.startsWith("image/")?`<img src="${esc(f.url)}">`:`<div class="fileIcon">FILE</div>`}<div>${esc(f.name)}</div></div>`).join("")||"<p class='muted'>No files uploaded.</p>";
+}
+async function uploadFiles(e){
+  const files=[...e.target.files];
+  for(const file of files){
+    if(cloudReady){
+      try{
+        const path=`${STORAGE_FOLDER}/${Date.now()}-${file.name}`;
+        const ref=storage.ref().child(path);
+        await ref.put(file);
+        const url=await ref.getDownloadURL();
+        state.files.unshift({id:uid(),name:file.name,type:file.type,size:file.size,path,url,date:new Date().toISOString()});
+      }catch(err){
+        state.files.unshift({id:uid(),name:file.name,type:file.type,size:file.size,path:"Upload blocked",url:"",date:new Date().toISOString()});
+        toast("One upload failed. Check Firebase Storage rules.");
+      }
+    }else{
+      state.files.unshift({id:uid(),name:file.name,type:file.type,size:file.size,path:"Local only",url:"",date:new Date().toISOString()});
+    }
+  }
+  saveAll();renderAll();
+}
+
+function deleteItem(key,id){state[key]=state[key].filter(x=>x.id!==id);saveAll();renderAll()}
+
+function autoBuildSeating(show){
+  const groups={};
+  state.guests.forEach(g=>{const t=g.table||"Unassigned";if(!groups[t])groups[t]=[];groups[t].push(g.name)});
+  $("seatingOutput").innerHTML=Object.keys(groups).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).map(t=>`<h4>Table ${esc(t)}</h4><p>${groups[t].map(esc).join(", ")}</p>`).join("")||"Add guests and table numbers to build seating.";
+  if(show)toast("Seating built.");
+}
+
+function saveSheetSettings(){
+  state.settings.sheetId=val("sheetIdSettings")||state.settings.sheetId;
+  state.settings.sheetName=val("sheetNameSettings")||state.settings.sheetName;
+  state.settings.scriptUrl=val("scriptUrl");
+  setVal("sheetId",state.settings.sheetId);
+  setVal("sheetName",state.settings.sheetName);
+  saveAll();
+  toast("Sheet settings saved.");
+}
+
+async function pullGoogleSheet(){
+  saveSheetSettings();
+  const script=state.settings.scriptUrl;
+  if(script){
+    try{
+      const r=await fetch(script+"?action=getGuests");
+      const j=await r.json();
+      if(Array.isArray(j.guests)){
+        state.guests=j.guests.map(g=>({id:g.id||uid(),name:g.name||g.Name||"",side:g.side||g.Side||"",rsvp:g.rsvp||g.RSVP||"Pending",meal:g.meal||g.Meal||"",table:g.table||g.Table||"",plus:g.plus||g["Plus One"]||"",notes:g.notes||g.Notes||""}));
+        saveAll();renderAll();toast("Pulled guests from Apps Script.");return;
+      }
+    }catch(e){toast("Apps Script pull failed. Trying public Google Sheet...")}
+  }
+  const sheetId=state.settings.sheetId;
+  const sheetName=encodeURIComponent(state.settings.sheetName||"Form Responses 1");
+  const url=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
+  try{
+    const res=await fetch(url);
+    if(!res.ok) throw new Error("Sheet fetch failed");
+    const text=await res.text();
+    if(text.toLowerCase().includes("<html")) throw new Error("Private sheet or blocked response");
+    const rows=parseCSV(text);
+    if(rows.length<2){toast("Sheet loaded but no rows found.");return}
+    const headers=rows[0].map(h=>h.trim());
+    const guests=rows.slice(1).filter(r=>r.some(Boolean)).map(row=>{
+      const obj={};headers.forEach((h,i)=>obj[h]=row[i]||"");
+      return normalizeGuest(obj);
+    });
+    state.guests=guests;
+    saveAll();renderAll();toast("Pulled guests from public Google Sheet.");
+  }catch(e){
+    toast("Google Sheet cannot be pulled while private. Share sheet as Anyone with link can view or add Apps Script URL.");
+  }
+}
+
+function normalizeGuest(obj){
+  const keys=Object.keys(obj);
+  const find=(arr)=>{const k=keys.find(x=>arr.some(a=>x.toLowerCase().includes(a)));return k?obj[k]:""};
+  const first=find(["first"]);
+  const last=find(["last"]);
+  const full=find(["name","guest"]);
+  return {
+    id:uid(),
+    name: full || `${first} ${last}`.trim() || "Unnamed Guest",
+    side: find(["side"]) || "",
+    rsvp: find(["rsvp","attend","coming"]) || "Pending",
+    meal: find(["meal","food","entrée","entree"]) || "",
+    table: find(["table"]) || "",
+    plus: find(["plus","guest count","additional"]) || "",
+    notes: find(["allerg","note","song","message"]) || ""
+  };
+}
+
+function parseCSV(text){
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i],n=text[i+1];
+    if(c==='"'&&q&&n==='"'){cur+='"';i++}
+    else if(c==='"'){q=!q}
+    else if(c===','&&!q){row.push(cur);cur=""}
+    else if((c==='\n'||c==='\r')&&!q){if(cur!==""||row.length){row.push(cur);rows.push(row);row=[];cur=""} if(c==='\r'&&n==='\n')i++}
+    else cur+=c;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row)}
+  return rows;
+}
+
+function downloadCSV(){
+  const headers=["Name","Side","RSVP","Meal","Table","Plus One","Notes"];
+  const rows=state.guests.map(g=>[g.name,g.side,g.rsvp,g.meal,g.table,g.plus,g.notes]);
+  const csv=[headers,...rows].map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wedding-guests-rsvp.csv";a.click();
+}
+
+function runAssistant(){
+  const open=state.tasks.filter(t=>!t.done);
+  const overdue=open.filter(t=>t.due&&new Date(t.due)<new Date());
+  const yes=state.guests.filter(g=>String(g.rsvp).toLowerCase()==="yes").length;
+  const vendorBal=state.vendors.reduce((s,v)=>s+Math.max(0,Number(v.total||0)-Number(v.paid||0)),0);
+  $("aiOutput").innerHTML=`<h4>Wedding Command Plan</h4>
+  <p><b>Focus now:</b> You have ${open.length} open tasks, ${overdue.length} overdue tasks, ${yes} confirmed guests, and ${money(vendorBal)} in tracked vendor balances.</p>
+  <ul>
+    <li>Update RSVP sheet and pull it into the app.</li>
+    <li>Confirm all vendor balances and arrival/load-in times.</li>
+    <li>Build separate packets for venue, DJ, photo/video, catering/bar, and wedding party.</li>
+    <li>Lock seating chart once RSVP count is final.</li>
+    <li>Upload contracts, receipts, inspiration, and print files into Firebase Storage.</li>
+  </ul>`;
+}
+function assistantForgotten(){
+  $("aiOutput").innerHTML=`<h4>Things Couples Forget</h4><ul>
+  <li>Marriage license, rings, vow books, pens, steamer, lint roller, scissors, tape, safety pins.</li>
+  <li>Vendor meals, gratuity envelopes, final payment confirmations, and emergency contacts.</li>
+  <li>Rain/cold plan, power access, extension cords, parking instructions, load-out owner.</li>
+  <li>Family photo list, DJ pronunciation guide, do-not-play songs, ceremony audio test.</li>
+  <li>Gift/card box owner, end-of-night cleanup owner, decor pickup owner.</li>
+  </ul>`;
+}
+function assistantFinalWeek(){
+  $("aiOutput").innerHTML=`<h4>Final Week Execution</h4><ul>
+  <li>Monday: Confirm every vendor, arrival time, balance, and point of contact.</li>
+  <li>Tuesday: Final seating, place cards, signs, table numbers, and printed packets.</li>
+  <li>Wednesday: Pack decor by zone: ceremony, reception, bar, photo, gifts, emergency kit.</li>
+  <li>Thursday: Confirm wedding party call times, attire, transportation, family photo list.</li>
+  <li>Friday: Rehearsal, hand off packets, verify rings/license/vows, stop making new decisions.</li>
+  <li>Saturday: One assigned point person handles questions; couple stays out of logistics.</li>
+  </ul>`;
+}
+function assistantVendorPackets(){
+  $("aiOutput").innerHTML=`<h4>Vendor Packet Structure</h4><ul>
+  <li><b>Venue:</b> timeline, floor plan, vendor arrivals, cleanup/load-out, emergency contacts.</li>
+  <li><b>DJ:</b> ceremony songs, entrances, dances, speeches, announcements, do-not-play.</li>
+  <li><b>Photo/Video:</b> shot list, family photo order, detail items, timeline, contact person.</li>
+  <li><b>Catering/Bar:</b> headcount, allergies, menu, bar menu, vendor meals, setup timing.</li>
+  <li><b>Wedding Party:</b> arrival times, attire, jobs, photo times, ceremony order.</li>
+  </ul>`;
+}
+
+function buildPacket(type){
+  const titleMap={master:"Wedding Master Packet",vendor:"Vendor Packet",party:"Wedding Party Packet",guest:"Guest / RSVP Packet",final:"Final Week Packet"};
+  const actual=state.budget.reduce((s,b)=>s+Number(b.actual||0),0);
+  let html=`<h1>${titleMap[type]||"Wedding Packet"}</h1>
+  <p><b>${esc(val("coupleName"))}</b><br>${esc(val("weddingDate"))} • ${esc(val("venueName"))} • ${esc(val("weddingTime"))}<br>${esc(val("theme"))} • ${esc(val("colorPalette"))}</p>`;
+  if(type==="master"||type==="final"){
+    html+=`<h2>Open Checklist</h2><ul>${state.tasks.filter(t=>!t.done).map(t=>`<li><b>${esc(t.name)}</b> — ${esc(t.category)} — ${esc(t.owner)} — ${esc(t.due)}</li>`).join("")}</ul>
+    <h2>Timeline</h2><ul>${state.timeline.map(t=>`<li><b>${esc(t.date)}:</b> ${esc(t.title)} — ${esc(t.notes)}</li>`).join("")}</ul>`;
+  }
+  if(type==="master"||type==="vendor"){
+    html+=`<h2>Vendors</h2><table><tr><th>Vendor</th><th>Category</th><th>Contact</th><th>Arrival</th><th>Balance</th><th>Notes</th></tr>${state.vendors.map(v=>`<tr><td>${esc(v.name)}</td><td>${esc(v.category)}</td><td>${esc(v.contact)} ${esc(v.phone)}</td><td>${esc(v.arrival)}</td><td>${money(Number(v.total||0)-Number(v.paid||0))}</td><td>${esc(v.notes)}</td></tr>`).join("")}</table>`;
+  }
+  if(type==="master"||type==="guest"){
+    html+=`<h2>Guests</h2><table><tr><th>Name</th><th>RSVP</th><th>Meal</th><th>Table</th><th>Notes</th></tr>${state.guests.map(g=>`<tr><td>${esc(g.name)}</td><td>${esc(g.rsvp)}</td><td>${esc(g.meal)}</td><td>${esc(g.table)}</td><td>${esc(g.notes)}</td></tr>`).join("")}</table>`;
+  }
+  if(type==="master"){
+    html+=`<h2>Budget</h2><p>Total Budget: ${money(val("totalBudget"))} • Actual Tracked: ${money(actual)} • Remaining: ${money(Number(val("totalBudget")||0)-actual)}</p>
+    <table><tr><th>Item</th><th>Category</th><th>Estimate</th><th>Actual</th></tr>${state.budget.map(b=>`<tr><td>${esc(b.item)}</td><td>${esc(b.category)}</td><td>${money(b.estimate)}</td><td>${money(b.actual)}</td></tr>`).join("")}</table>`;
+  }
+  if(type==="party"||type==="final"){
+    html+=`<h2>Wedding Party Jobs</h2><ul>
+      <li>One person owns rings/license/vows.</li><li>One person owns cards/gifts.</li><li>One person owns vendor questions.</li><li>One person owns family photo gathering.</li><li>One person owns emergency kit.</li>
+    </ul>`;
+  }
+  html+=`<h2>Seating Notes</h2><p>${esc(val("seatingNotes")).replace(/\n/g,"<br>")}</p>`;
+  $("printPacket").innerHTML=html;
+  return html;
+}
+function downloadPacket(type){
+  buildPacket(type);
+  const el=$("printPacket");
+  el.style.display="block";
+  html2pdf().set({
+    margin:.35,
+    filename:`Wedding-Command-Center-${type}-packet.pdf`,
+    image:{type:"jpeg",quality:.98},
+    html2canvas:{scale:2,useCORS:true},
+    jsPDF:{unit:"in",format:"letter",orientation:"portrait"}
+  }).from(el).save().then(()=>{el.style.display="none"});
+}
+
+function exportJSON(){saveLocal();const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wedding-command-center-backup.json";a.click()}
+function importJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);applyForm();saveAll();renderAll();toast("Backup imported.")}catch(err){toast("Import failed.")}};r.readAsText(f)}
+
+window.addEventListener("beforeunload",saveLocal);
+loadLocal();
+initFirebase();
+</script>
+</body>
+</html>
